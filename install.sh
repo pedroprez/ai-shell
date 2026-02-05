@@ -18,6 +18,11 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Function to read from terminal (works with curl | bash)
+ask() {
+  read -r "$1" </dev/tty
+}
+
 echo -e "${GREEN}🤖 ai-shell installer${NC}"
 echo ""
 
@@ -49,24 +54,24 @@ echo -e "${CYAN}Checking available AI providers...${NC}"
 PROVIDERS=()
 
 if command -v ollama &>/dev/null; then
-  echo -e "  Ollama: ${GREEN}found${NC}"
+  echo -e "  1) Ollama: ${GREEN}found${NC}"
   PROVIDERS+=("ollama")
 else
-  echo -e "  Ollama: ${YELLOW}not installed${NC}"
+  echo -e "     Ollama: ${YELLOW}not installed${NC}"
 fi
 
 if command -v claude &>/dev/null; then
-  echo -e "  Claude CLI: ${GREEN}found${NC}"
+  echo -e "  2) Claude CLI: ${GREEN}found${NC}"
   PROVIDERS+=("claude")
 else
-  echo -e "  Claude CLI: ${YELLOW}not installed${NC}"
+  echo -e "     Claude CLI: ${YELLOW}not installed${NC}"
 fi
 
 if command -v gemini &>/dev/null; then
-  echo -e "  Gemini CLI: ${GREEN}found${NC}"
+  echo -e "  3) Gemini CLI: ${GREEN}found${NC}"
   PROVIDERS+=("gemini")
 else
-  echo -e "  Gemini CLI: ${YELLOW}not installed${NC}"
+  echo -e "     Gemini CLI: ${YELLOW}not installed${NC}"
 fi
 
 if [[ ${#PROVIDERS[@]} -eq 0 ]]; then
@@ -86,13 +91,11 @@ if [[ ${#PROVIDERS[@]} -eq 1 ]]; then
   SELECTED_PROVIDER="${PROVIDERS[0]}"
   echo -e "Using: ${GREEN}$SELECTED_PROVIDER${NC}"
 else
-  echo "Select your AI provider:"
-  select opt in "${PROVIDERS[@]}"; do
-    if [[ -n "$opt" ]]; then
-      SELECTED_PROVIDER="$opt"
-      break
-    fi
-  done
+  echo -n "Select provider [1-${#PROVIDERS[@]}]: "
+  ask choice
+  idx=$((choice - 1))
+  SELECTED_PROVIDER="${PROVIDERS[$idx]:-${PROVIDERS[0]}}"
+  echo -e "Selected: ${GREEN}$SELECTED_PROVIDER${NC}"
 fi
 
 # If Ollama, handle model selection
@@ -112,40 +115,45 @@ if [[ "$SELECTED_PROVIDER" == "ollama" ]]; then
   fi
 
   # Get installed models
-  INSTALLED_MODELS=$(curl -s http://localhost:11434/api/tags 2>/dev/null | jq -r '.models[].name' 2>/dev/null)
+  INSTALLED_MODELS=$(curl -s http://localhost:11434/api/tags 2>/dev/null | jq -r '.models[].name' 2>/dev/null || echo "")
   
   if [[ -n "$INSTALLED_MODELS" ]]; then
     echo -e "${CYAN}Installed models:${NC}"
-    echo "$INSTALLED_MODELS" | while read -r m; do echo "  • $m"; done
+    i=1
+    while IFS= read -r m; do
+      echo "  $i) $m"
+      ((i++))
+    done <<< "$INSTALLED_MODELS"
+    echo "  $i) Download new model..."
     echo ""
-    echo "Select a model (or type a new one to install):"
+    echo -n "Select model [1-$i]: "
+    ask model_choice
     
-    # Convert to array
-    readarray -t MODEL_ARRAY <<< "$INSTALLED_MODELS"
-    MODEL_ARRAY+=("Install new model...")
+    # Count models
+    model_count=$(echo "$INSTALLED_MODELS" | wc -l)
     
-    select opt in "${MODEL_ARRAY[@]}"; do
-      if [[ "$opt" == "Install new model..." ]]; then
-        SELECTED_MODEL=""
-        break
-      elif [[ -n "$opt" ]]; then
-        SELECTED_MODEL="$opt"
-        break
-      fi
-    done
+    if [[ "$model_choice" -le "$model_count" ]] 2>/dev/null; then
+      SELECTED_MODEL=$(echo "$INSTALLED_MODELS" | sed -n "${model_choice}p")
+    fi
   fi
 
   # If no model selected, offer suggestions
   if [[ -z "$SELECTED_MODEL" ]]; then
     echo ""
     echo "Recommended lightweight models:"
-    SUGGESTED_MODELS=("qwen2.5:3b" "llama3.2:3b" "phi3:mini")
-    select opt in "${SUGGESTED_MODELS[@]}"; do
-      if [[ -n "$opt" ]]; then
-        SELECTED_MODEL="$opt"
-        break
-      fi
-    done
+    echo "  1) qwen2.5:3b  (~2GB, fast)"
+    echo "  2) llama3.2:3b (~2GB, good quality)"
+    echo "  3) phi3:mini   (~2GB, Microsoft)"
+    echo ""
+    echo -n "Select model to download [1-3]: "
+    ask dl_choice
+    
+    case "$dl_choice" in
+      1) SELECTED_MODEL="qwen2.5:3b" ;;
+      2) SELECTED_MODEL="llama3.2:3b" ;;
+      3) SELECTED_MODEL="phi3:mini" ;;
+      *) SELECTED_MODEL="qwen2.5:3b" ;;
+    esac
     
     echo ""
     echo -e "${YELLOW}Downloading $SELECTED_MODEL...${NC}"
