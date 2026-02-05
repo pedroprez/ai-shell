@@ -1,8 +1,6 @@
 # ai-shell 🤖
 
-A quick AI assistant for your terminal using local [Ollama](https://ollama.ai).
-
-Ask questions, get shell commands, do math - all from your terminal with `/ai` or `/ia`.
+A quick AI assistant for your terminal. Supports multiple AI providers.
 
 ## Quick Install
 
@@ -10,13 +8,19 @@ Ask questions, get shell commands, do math - all from your terminal with `/ai` o
 curl -fsSL https://raw.githubusercontent.com/pedroprez/ai-shell/main/install.sh | bash
 ```
 
-## Requirements
+The installer will:
+1. Detect available AI providers (Ollama, Claude CLI, Gemini CLI)
+2. Let you choose which one to use
+3. For Ollama: let you select from installed models or download a new one
+4. Configure everything automatically
 
-- **Ollama** - Local LLM runtime ([install](https://ollama.ai))
-- **curl** - HTTP client
-- **jq** - JSON processor
+## Supported Providers
 
-The installer will check for these and guide you if anything is missing.
+| Provider | Local | Setup |
+|----------|-------|-------|
+| **Ollama** | ✅ | `curl -fsSL https://ollama.ai/install.sh \| sh` |
+| **Claude CLI** | ❌ | `npm install -g @anthropic-ai/claude-cli` |
+| **Gemini CLI** | ❌ | `pip install google-generativeai` |
 
 ## Usage
 
@@ -38,39 +42,33 @@ The installer will check for these and guide you if anything is missing.
 # Ask questions
 /ai what is the capital of France
 → Paris
-
-/ai what day is it in 100 days
-→ Friday, May 16, 2025
 ```
 
 ## Configuration
 
-Optional environment variables:
+Config is stored in `~/.ai-shell.conf`:
 
 ```bash
-# Use a different model (default: qwen2.5:7b)
-export AI_MODEL="llama3.2:3b"
-
-# Use a remote Ollama server
-export AI_HOST="http://192.168.1.100:11434"
+AI_PROVIDER=ollama
+AI_MODEL=qwen2.5:3b
 ```
 
-Add these to your `~/.bashrc` or `~/.zshrc` to make them permanent.
+To change provider or model, edit the file or re-run the installer.
+
+### Environment Variables
+
+You can also override via environment:
+
+```bash
+export AI_PROVIDER="claude"      # Use Claude instead
+export AI_MODEL="llama3.2:3b"    # Different Ollama model
+export AI_HOST="http://server:11434"  # Remote Ollama
+```
 
 ## Supported Systems
 
 - ✅ Linux (bash)
 - ✅ macOS (zsh/bash)
-
-## Uninstall
-
-```bash
-# Remove the script
-rm ~/.local/bin/ai-shell.sh
-
-# Remove the source line from your shell config
-# Edit ~/.bashrc or ~/.zshrc and remove the ai-shell line
-```
 
 ## Inspiration
 
