@@ -111,8 +111,10 @@ fi
 echo ""
 echo -e "${GREEN}✅ Installation complete!${NC}"
 echo ""
-echo "Open a new terminal window and try:"
-echo ""
+echo "Examples:"
 echo "  /ai list files sorted by size"
 echo "  /ia what is 25 * 4"
 echo "  /ai what day is today"
+echo ""
+echo "Reloading shell..."
+exec $SHELL
